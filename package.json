@@ -1,0 +1,7 @@
+{
+  "name": "rlc-simulator-backend",
+  "version": "1.0.0",
+  "dependencies": {
+    "mongodb": "^6.3.0"
+  }
+}

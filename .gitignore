@@ -1,0 +1,13 @@
+# Node
+node_modules/
+npm-debug.log
+
+# Netlify
+.netlify/
+
+# Environment Variables
+.env
+
+# System
+.DS_Store
+Thumbs.db
