@@ -8,15 +8,26 @@ exports.handler = async (event, context) => {
         return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    try {
-        const { db } = await connectToDatabase();
-        const config = await db.collection('system_config').findOne({ _id: 'main_config' });
+    let config = null;
+    let dbError = null;
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify(config || { message: '' })
-        };
+    try {
+        if (process.env.MONGODB_URI) {
+            const { db } = await connectToDatabase();
+            config = await db.collection('system_config').findOne({ _id: 'main_config' });
+        }
     } catch (error) {
-        return { statusCode: 500, body: error.toString() };
+        console.error("DB Connection Error:", error);
+        dbError = error.message;
     }
+
+    return {
+        statusCode: 200,
+        body: JSON.stringify({
+            ...(config || { message: '' }),
+            isDev: process.env.NETLIFY_DEV === 'true',
+            hasMongo: !!process.env.MONGODB_URI,
+            dbError: dbError
+        })
+    };
 };

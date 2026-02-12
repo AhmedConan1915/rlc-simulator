@@ -654,7 +654,7 @@
         /* --- END CHAT SIDEBAR --- */
     </style>
     </style>
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
 </head>
 
 <body>
@@ -2388,30 +2388,86 @@
         const dash = new Dashboard();
         const chat = new Chat();
 
-        // Netlify Identity Handling
-        if (window.netlifyIdentity) {
-            // Fix for local development: Explicitly set the site URL found in your screenshot
-            window.netlifyIdentity.init({
-                APIUrl: 'https://rlc-simulator.netlify.app/.netlify/identity',
-                logo: false // Try to disable default logo if supported
-            });
+        // --- SMART IDENTITY INITIALIZATION ---
+        (async function initIdentity() {
+            let useReal = false;
 
-            window.netlifyIdentity.on('init', user => {
-                if (!user) {
-                    console.log('No user');
-                } else {
-                    console.log('User found', user);
-                    handleLogin(user);
+            // 1. Determine Environment
+            if (window.location.hostname === 'rlc-simulator.netlify.app') {
+                useReal = true;
+            } else {
+                try {
+                    // Check local simulation config
+                    const res = await fetch('/.netlify/functions/config');
+                    if (res.ok) {
+                        const cfg = await res.json();
+                        console.log("Config loaded:", cfg);
+
+                        if (cfg.hasMongo) {
+                            if (cfg.dbError) {
+                                console.error("Backend DB Error:", cfg.dbError);
+                                alert("Backend Error: " + cfg.dbError);
+                            } else {
+                                console.log("Environment: Local Simulation (Real DB)");
+                                useReal = true;
+                            }
+                        } else {
+                            console.log("Environment: No DB Configured (Mock Mode)");
+                        }
+                    } else {
+                        console.error("Config fetch failed:", res.status, await res.text());
+                    }
+                } catch (e) {
+                    console.error("Environment Check Error:", e);
+                    console.log("Environment: Offline (Defaulting to Mock)");
                 }
-            });
-            window.netlifyIdentity.on('login', user => {
-                handleLogin(user);
-                netlifyIdentity.close();
-            });
-            window.netlifyIdentity.on('logout', () => {
-                handleLogout();
-            });
-        }
+            }
+
+            // 2. Load the appropriate script
+            const script = document.createElement('script');
+            script.src = useReal ? "https://identity.netlify.com/v1/netlify-identity-widget.js" : "js/offline-mock.js";
+
+            // 3. Initialize ONLY after script loads
+            script.onload = function () {
+                if (window.netlifyIdentity) {
+                    const initConfig = { logo: false };
+
+
+
+                    // THE ULTIMATE FIX: Use a dedicated server-side tunnel (Auth Bridge)
+                    // This bypasses CORS and local netlify dev bugs permanently.
+                    if (useReal && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                        console.log("Using Auth Bridge Tunnel (/.netlify/functions/auth-bridge)");
+                        localStorage.removeItem("netlify-identity-widget-settings");
+                        initConfig.APIUrl = '/.netlify/functions/auth-bridge';
+                    }
+
+                    window.netlifyIdentity.init(initConfig);
+
+                    window.netlifyIdentity.on('init', user => {
+                        if (user) {
+                            console.log('User found (init)', user);
+                            handleLogin(user);
+                        }
+                    });
+
+                    window.netlifyIdentity.on('login', user => {
+                        console.log('User logged in', user);
+                        handleLogin(user);
+                        window.netlifyIdentity.close();
+                    });
+
+                    window.netlifyIdentity.on('logout', () => {
+                        handleLogout();
+                    });
+
+                    // Check for existing user immediately
+                    const currentUser = window.netlifyIdentity.currentUser();
+                    if (currentUser) handleLogin(currentUser);
+                }
+            };
+            document.head.appendChild(script);
+        })();
 
         // --- ADMIN DASHBOARD LOGIC ---
         const ADMIN_EMAIL = "Ahmedconan1115@gmail.com"; // Client-side check only for UI visibility
