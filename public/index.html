@@ -2432,14 +2432,18 @@
                 if (window.netlifyIdentity) {
                     const initConfig = { logo: false };
 
+                    // ALWAYS clear contaminated settings (Fixes many "Failed to load settings" bugs)
+                    localStorage.removeItem("netlify-identity-widget-settings");
 
-
-                    // THE ULTIMATE FIX: Use a dedicated server-side tunnel (Auth Bridge)
-                    // This bypasses CORS and local netlify dev bugs permanently.
-                    if (useReal && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-                        console.log("Using Auth Bridge Tunnel (/.netlify/functions/auth-bridge)");
-                        localStorage.removeItem("netlify-identity-widget-settings");
-                        initConfig.APIUrl = '/.netlify/functions/auth-bridge';
+                    if (useReal) {
+                        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                            console.log("Using Auth Bridge Tunnel (/.netlify/functions/auth-bridge)");
+                            initConfig.APIUrl = '/.netlify/functions/auth-bridge';
+                        } else {
+                            // Production: Explicitly use the site's identity URL for maximum stability
+                            console.log("Using Production Identity Service");
+                            initConfig.APIUrl = 'https://rlc-simulator.netlify.app/.netlify/identity';
+                        }
                     }
 
                     window.netlifyIdentity.init(initConfig);

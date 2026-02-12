@@ -2,6 +2,16 @@
   publish = "public"
   functions = "netlify/functions"
 
+# Allow system paths to pass through
+[[redirects]]
+  from = "/.netlify/functions/*"
+  status = 200
+
+[[redirects]]
+  from = "/.netlify/identity/*"
+  status = 200
+
+# SPA Catch-all (Must be last)
 [[redirects]]
   from = "/*"
   to = "/index.html"
