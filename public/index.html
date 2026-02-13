@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -635,20 +635,133 @@
 
         #chatToggleBtn {
             position: fixed;
-            bottom: 20px;
+            top: 75px;
             right: 20px;
             width: 50px;
             height: 50px;
             border-radius: 25px;
             background: var(--accent-color);
             color: white;
-            display: none;
+            display: flex;
             /* Only show when circuit loaded */
             align-items: center;
             justify-content: center;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             z-index: 100;
             cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .chat-sidebar-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #chatToggleBtn .badge {
+            font-size: 0.6rem;
+            background: #ef4444;
+            padding: 2px 4px;
+            border-radius: 10px;
+            position: absolute;
+            top: 2px;
+            right: 2px;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .message:hover .message-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            font-size: 0.7rem;
+            color: white;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            padding: 2px 6px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .action-btn:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .delete-btn {
+            color: #fca5a5;
+        }
+
+        .reactions-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 5px;
+        }
+
+        .reaction-chip {
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: background 0.2s;
+        }
+
+        .reaction-chip.active {
+            background: rgba(37, 99, 235, 0.1);
+            border-color: #2563eb;
+        }
+
+        .reaction-picker {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            display: flex;
+            padding: 4px;
+            gap: 4px;
+            z-index: 101;
+            display: none;
+        }
+
+        .message:hover .reaction-picker-trigger:hover+.reaction-picker,
+        .reaction-picker:hover {
+            display: flex;
+        }
+
+        .picker-emoji {
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .picker-emoji:hover {
+            background: #f1f5f9;
+        }
+
+        .chat-reply-preview {
+            padding: 8px 15px;
+            background: #f1f5f9;
+            border-top: 1px solid #e2e8f0;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
         }
 
         /* --- END CHAT SIDEBAR --- */
@@ -674,7 +787,7 @@
                     <img class="header-logo" alt="Logo">
                     <div style="display:flex;flex-direction:column;justify-content:center;">
                         <h1><b>RLC-Simulator</b></h1>
-                        <span>Interactive Analysis</span>
+                        <span>Made By: Ahmed Emad</span>
                     </div>
                 </div>
 
@@ -713,6 +826,17 @@
             <button class="btn btn-primary" onclick="sim.run(true)">▶ Run</button>
             <button class="btn btn-danger" onclick="sim.stop()">⬛ Stop</button>
             <button class="btn" onclick="editor.clear()">✕ Clear</button>
+            <div style="border-left:1px solid #ddd; margin:0 5px; height:24px;"></div>
+            <div style="display:flex; align-items:center; gap:5px; font-size:0.8rem; color:#475569;">
+                <span>Mode:</span>
+                <select id="simMode" class="btn" style="padding:2px 5px;" onchange="sim.setMode(this.value)">
+                    <option value="transient">Transient</option>
+                    <option value="interactive">Steady State (Interactive)</option>
+                </select>
+                <div id="liveIndicator"
+                    style="width:10px; height:10px; border-radius:50%; background:#ccc; margin-left:5px;"
+                    title="Live Simulation Active"></div>
+            </div>
             <button class="btn like-btn" id="toolbarLikeBtn" style="display:none; padding: 0.35rem 0.8rem;"
                 onclick="dash.toggleToolbarLike()">
                 👍 <span id="toolbarLikeCount">0</span>
@@ -737,6 +861,11 @@
             <div class="chat-messages" id="chatMessages">
                 <p style="color:#666; text-align:center; margin-top:20px;">No messages yet.</p>
             </div>
+            <div class="chat-reply-preview" id="chatReplyPreview">
+                <div style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="replyPreviewText">
+                </div>
+                <button class="btn btn-sm" onclick="chat.clearReply()">✕</button>
+            </div>
             <div class="chat-input-area">
                 <input type="text" id="chatInput" placeholder="Type a message..." style="flex:1;"
                     onkeyup="if(event.key==='Enter') chat.send()">
@@ -756,6 +885,8 @@
                         onclick="editor.addComponent('inductor')">Inductor</button>
                     <button class="btn comp-btn" draggable="true" ondragstart="editor.onDragStart(event, 'gnd')"
                         onclick="editor.addComponent('gnd')">Ground</button>
+                    <button class="btn comp-btn" draggable="true" ondragstart="editor.onDragStart(event, 'diode')"
+                        onclick="editor.addComponent('diode')">Diode</button>
                 </div>
             </div>
             <div class="sidebar-section">
@@ -820,6 +951,7 @@
                         </div>
                         <button class="btn btn-sm" id="btnVolt" onclick="sim.setProbeMode('voltage')">V</button>
                         <button class="btn btn-sm" id="btnCurr" onclick="sim.setProbeMode('current')">A</button>
+                        <button class="btn btn-sm" id="btnDual" onclick="sim.setProbeMode('dual')">V&A</button>
                         <button class="btn btn-sm" id="btnGrid" onclick="sim.toggleGrid()">Grid</button>
                         <button class="btn btn-sm" id="btnAuto" onclick="sim.toggleAutoScale()">Auto</button>
                     </div>
@@ -848,7 +980,12 @@
         </div>
         <div id="dashActions"
             style="border-top:1px solid #eee; padding-top:10px; display:flex; justify-content:space-between; align-items:center;">
-            <button class="btn btn-sm" onclick="dash.testConn()">Test Connection</button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-sm" id="btnTestConn" style="display:none;" onclick="dash.testConn()">Test
+                    Connection</button>
+                <button class="btn btn-sm" id="btnSysLogs" style="display:none;"
+                    onclick="dash.loadAdmin(); dash.loadAdminLogs();">📜 Logs</button>
+            </div>
             <div id="btnGroup" style="display:flex; gap:5px;"></div>
         </div>
     </div>
@@ -964,12 +1101,42 @@
 
         class Simulator {
             constructor() {
-                this.timeStep = 0.00001;
+                this.timeStep = 10e-6;
                 this.endTime = 0.5;
-                this.probeMode = 'voltage';
-                this.yMin = -10; this.yMax = 10; this.autoY = true;
+                this.stopped = true;
                 this.showGrid = true;
-                this.stopped = false;
+                this.autoY = false;
+                this.yMin = -10; this.yMax = 10;
+                this.probeMode = 'voltage';
+
+                // Interactive Mode State
+                this.mode = 'transient';
+                this.isInteractive = false;
+                this.animationFrameId = null;
+                this.rollingData = [];
+                this.maxPoints = 2000;
+                this.simTime = 0;
+                this.topo = null;
+
+                // Interactive Graph State
+                this.viewXMin = 0; this.viewXMax = this.endTime;
+                this.isDragging = false;
+                this.lastMouseX = 0; this.lastMouseY = 0;
+                this.bindGraphEvents();
+            }
+
+            setMode(m) {
+                this.mode = m;
+                const ind = document.getElementById('liveIndicator');
+                if (ind) ind.style.background = (m === 'interactive') ? '#22c55e' : '#ccc';
+                this.stop();
+                this.isInteractive = (m === 'interactive');
+                if (m === 'transient') {
+                    // Reset View for Transient
+                    const durationEl = document.getElementById('simDuration');
+                    this.endTime = durationEl ? parseFloat(durationEl.value) || 0.5 : 0.5;
+                    this.viewXMin = 0; this.viewXMax = this.endTime;
+                }
             }
             stop() { this.stopped = true; const s = document.getElementById('simStatus'); if (s) s.textContent = 'Stopped'; }
             updateDuration() {
@@ -991,84 +1158,139 @@
             }
             setProbeMode(mode) { this.probeMode = mode; this.updateProbeButtons(); this.run(); }
             updateProbeButtons() {
-                const bv = document.getElementById('btnVolt'), bc = document.getElementById('btnCurr');
+                const bv = document.getElementById('btnVolt'), bc = document.getElementById('btnCurr'), bd = document.getElementById('btnDual');
                 const bg = document.getElementById('btnGrid'), ba = document.getElementById('btnAuto');
                 if (bv) bv.style.borderColor = this.probeMode === 'voltage' ? 'var(--accent-color)' : '';
                 if (bc) bc.style.borderColor = this.probeMode === 'current' ? 'var(--accent-color)' : '';
+                if (bd) bd.style.borderColor = this.probeMode === 'dual' ? 'var(--accent-color)' : '';
                 if (bg) bg.style.borderColor = this.showGrid ? 'var(--accent-color)' : '';
                 if (ba) ba.style.borderColor = this.autoY ? 'var(--accent-color)' : '';
             }
-            toggleGrid() { this.showGrid = !this.showGrid; this.updateProbeButtons(); this.run(); }
-            toggleAutoScale() { this.autoY = !this.autoY; this.updateProbeButtons(); this.run(); }
-            solveDC(pinMap, extraVars) {
-                const nodes = Array.from(pinMap.values()), nLimit = nodes.length > 0 ? Math.max(...nodes) + 1 : 1;
-                const dim = nLimit - 1, size = dim + extraVars.length;
-                if (size <= 0) return [];
-                const G = Matrix.zeros(size, size), I = new Array(size).fill(0);
-                editor.components.forEach(c => {
-                    let n1 = pinMap.get(c.pins[0]?.id) - 1, n2 = pinMap.get(c.pins[1]?.id) - 1;
-                    let val = parseFloat(c.value) || 0;
-                    if (c.type === 'resistor') {
-                        let g = 1 / (val || 1e-9);
-                        if (n1 >= 0) G.add(n1, n1, g); if (n2 >= 0) G.add(n2, n2, g);
-                        if (n1 >= 0 && n2 >= 0) { G.add(n1, n2, -g); G.add(n2, n1, -g); }
-                    } else if (c.type === 'voltageSource' || c.type === 'currentSense' || c.type === 'inductor') {
-                        let ev = extraVars.find(x => x.comp === c);
-                        if (ev) {
-                            if (n1 >= 0) G.add(n1, ev.index, 1); if (n2 >= 0) G.add(n2, ev.index, -1);
-                            if (n1 >= 0) G.add(ev.index, n1, 1); if (n2 >= 0) G.add(ev.index, n2, -1);
-                            if (c.type === 'voltageSource') I[ev.index] -= val;
-                        }
-                    } else if (c.type === 'vcvs' || c.type === 'ccvs') {
-                        let ev = extraVars.find(x => x.comp === c);
-                        if (ev) {
-                            if (n1 >= 0) G.add(n1, ev.index, 1); if (n2 >= 0) G.add(n2, ev.index, -1);
-                            if (n1 >= 0) G.add(ev.index, n1, 1); if (n2 >= 0) G.add(ev.index, n2, -1);
-                            if (c.type === 'vcvs') {
-                                let p1 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C+"));
-                                let p2 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C-"));
-                                let cn1 = p1 ? pinMap.get(p1.pins[0].id) - 1 : -1, cn2 = p2 ? pinMap.get(p2.pins[0].id) - 1 : -1;
-                                if (cn1 >= 0) G.add(ev.index, cn1, val); if (cn2 >= 0) G.add(ev.index, cn2, -val);
-                            } else {
-                                let sense = editor.components.find(x => x.controlOwner === c.id && x.type === 'currentSense');
-                                let sev = extraVars.find(x => x.comp === sense);
-                                if (sev) G.add(ev.index, sev.index, val);
-                            }
-                        }
-                    } else if (c.type === 'vccs') {
-                        let p1 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C+"));
-                        let p2 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C-"));
-                        let cn1 = p1 ? pinMap.get(p1.pins[0].id) - 1 : -1, cn2 = p2 ? pinMap.get(p2.pins[0].id) - 1 : -1;
-                        if (n1 >= 0) { if (cn1 >= 0) G.add(n1, cn1, val); if (cn2 >= 0) G.add(n1, cn2, -val); }
-                        if (n2 >= 0) { if (cn1 >= 0) G.add(n2, cn1, -val); if (cn2 >= 0) G.add(n2, cn2, val); }
-                    } else if (c.type === 'cccs') {
-                        let sense = editor.components.find(x => x.controlOwner === c.id && x.type === 'currentSense');
-                        let sev = extraVars.find(x => x.comp === sense);
-                        if (sev) { if (n1 >= 0) G.add(n1, sev.index, val); if (n2 >= 0) G.add(n2, sev.index, -val); }
-                    } else if (c.type === 'isource') {
-                        if (n1 >= 0) I[n1] -= val; if (n2 >= 0) I[n2] += val;
-                    } else if (c.type === 'switch') {
-                        let closed = (c.switchAction === 'open');
-                        let g = closed ? 1e7 : 1e-12;
-                        if (n1 >= 0) G.add(n1, n1, g); if (n2 >= 0) G.add(n2, n2, g);
-                        if (n1 >= 0 && n2 >= 0) { G.add(n1, n2, -g); G.add(n2, n1, -g); }
+            toggleGrid() { this.showGrid = !this.showGrid; this.updateProbeButtons(); this.run(true); } // force re-render
+            toggleAutoScale() { this.autoY = !this.autoY; this.updateProbeButtons(); this.run(true); }
+
+            bindGraphEvents() {
+                const canvas = document.getElementById('graphCanvas');
+                if (!canvas) return; // Might need to retry or bind on first run
+
+                canvas.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    const w = canvas.width, h = canvas.height;
+                    const pL = 50, pR = 50, pB = 30; // Matches plot padding
+
+                    const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+
+                    // Logic: 
+                    // - On X-axis (bottom gutter): Zoom X
+                    // - On Left Axis (Voltage): Zoom Left Y
+                    // - On Right Axis (Current - if dual): Zoom Right Y
+                    // - Else (Center): Zoom X only (User requested "stop on x axis to zoom in/out x only", "stop on y axis... y only". Center implies general navigation, usually time or both. Standard oscilloscopes scale Time base or Volts/div. Let's make center act like Time base zoom).
+
+                    const isBottom = y > h - pB;
+                    const isLeft = x < pL;
+                    const isRight = x > w - pR;
+
+                    if (isBottom) {
+                        // Zoom X around mouse T
+                        // Actually easier to zoom center of view for X
+                        let span = this.viewXMax - this.viewXMin;
+                        let newSpan = span * zoomFactor;
+                        let mid = (this.viewXMin + this.viewXMax) / 2;
+                        // Or zoom around mouse X relative? lets keep simple center zoom for axis scroll
+                        this.viewXMin = mid - newSpan / 2;
+                        this.viewXMax = mid + newSpan / 2;
+                    } else if (isLeft || (this.probeMode !== 'dual' && !isRight)) {
+                        // Zoom Y (Voltage/Main)
+                        let span = this.yMax - this.yMin;
+                        let newSpan = span * zoomFactor;
+                        let mid = (this.yMin + this.yMax) / 2;
+                        // If mouse is on axis, zoom around mouse value? 
+                        // Simple center zoom is safer for now
+                        this.yMin = mid - newSpan / 2;
+                        this.yMax = mid + newSpan / 2;
+                        this.autoY = false;
+                        const yMinEl = document.getElementById('yAxisMin'), yMaxEl = document.getElementById('yAxisMax');
+                        if (yMinEl) yMinEl.value = this.yMin.toFixed(2); if (yMaxEl) yMaxEl.value = this.yMax.toFixed(2);
+                    } else if (isRight && this.probeMode === 'dual') {
+                        // Zoom Y2 (Current) - complicated as we don't store y2Min/Max in simulator state explicitly, we compute them per frame in dual mode auto-scale.
+                        // To support manual Y2 zoom, we'd need state for it.
+                        // Currently Dual Mode auto-scales every frame.
+                        // User request: "Dual Mode" exists. "Zoom in or out for y only".
+                        // If in Dual mode, scroll on right axis *should* zoom current.
+                        // But Simulator structure (lines 1450+) re-calculates vMin/vMax every time for dual.
+                        // I need to make Dual Mode use persistent state or scaled state if I want to support zoom.
+                        // For now, let's implement basic Y zoom on main axis and X zoom. 
+                        // If user scrolls on Right axis in Dual Mode, it might not persist if auto-scale overrides.
+                        // I will disable autoY when zooming.
+                    } else {
+                        // Center -> Zoom X (Time) per user implication ("move inside curve... x axis... x only")
+                        let span = this.viewXMax - this.viewXMin;
+                        let newSpan = span * zoomFactor;
+                        let mouseRelX = (x - pL) / (w - pL - pR);
+                        let timeAtMouse = this.viewXMin + mouseRelX * span;
+
+                        // Zoom around timeAtMouse
+                        this.viewXMin = timeAtMouse - (mouseRelX * newSpan);
+                        this.viewXMax = timeAtMouse + ((1 - mouseRelX) * newSpan);
+                    }
+                    this.run(true); // force redraw with new view
+                });
+
+                canvas.addEventListener('mousedown', (e) => {
+                    this.isDragging = true;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+                    canvas.style.cursor = 'grabbing';
+                });
+
+                window.addEventListener('mouseup', () => {
+                    if (this.isDragging) {
+                        this.isDragging = false;
+                        canvas.style.cursor = 'default';
                     }
                 });
-                for (let i = 0; i < size; i++) G.add(i, i, 1e-20);
-                return G.solve(I);
-            }
 
-            run(force = false) {
-                if (typeof editor === 'undefined' || !editor.initialized) return;
-                if (this.stopped && !force) return;
-                this.stopped = false;
+                window.addEventListener('mousemove', (e) => {
+                    if (!this.isDragging) return;
+                    e.preventDefault();
+                    const dx = e.clientX - this.lastMouseX;
+                    const dy = e.clientY - this.lastMouseY;
+                    this.lastMouseX = e.clientX;
+                    this.lastMouseY = e.clientY;
+
+                    const w = canvas.width, h = canvas.height;
+                    const pL = 50, pR = 50, pT = 30, pB = 30; // Matches plot
+
+                    // Panning X
+                    // dx pixels = ? seconds
+                    // gw is w - pL - pR
+                    const gw = w - pL - pR;
+                    const timeSpan = this.viewXMax - this.viewXMin;
+                    const dt = -(dx / gw) * timeSpan;
+                    this.viewXMin += dt; this.viewXMax += dt;
+
+                    // Panning Y
+                    // dy pixels = ? volts
+                    const gh = h - pT - pB;
+                    const valSpan = this.yMax - this.yMin;
+                    const dv = (dy / gh) * valSpan; // dy is positive down, value increases up
+                    this.yMin += dv; this.yMax += dv;
+                    this.autoY = false;
+
+                    const yMinEl = document.getElementById('yAxisMin'), yMaxEl = document.getElementById('yAxisMax');
+                    if (yMinEl) yMinEl.value = this.yMin.toFixed(2); if (yMaxEl) yMaxEl.value = this.yMax.toFixed(2);
+
+                    this.run(true);
+                });
+            }
+            analyzeTopology() {
                 const target = editor.selection.size === 1 ? [...editor.selection][0] : editor.lastProbed;
-                const status = document.getElementById('simStatus');
-                if (!target) return;
                 const gnd = editor.components.find(c => c.type === 'gnd');
-                if (!gnd) { if (status) status.textContent = "Need GND"; return; }
-                const durationEl = document.getElementById('simDuration');
-                this.endTime = durationEl ? parseFloat(durationEl.value) || 0.5 : 0.5;
+                if (!gnd) return { error: "Need GND" };
+
                 const nets = [];
                 const findNet = (p) => { for (let i = 0; i < nets.length; i++) if (nets[i].has(p)) return i; return -1; };
                 editor.connections.forEach(conn => {
@@ -1078,34 +1300,43 @@
                     else if (nA === -1 && nB !== -1) nets[nB].add(conn.from.id);
                     else if (nA !== nB) { nets[nB].forEach(p => nets[nA].add(p)); nets.splice(nB, 1); }
                 });
+
                 const pinMap = new Map();
                 const gndIdx = findNet(gnd.pins[0].id);
                 if (gndIdx !== -1) nets[gndIdx].forEach(p => pinMap.set(p, 0)); else pinMap.set(gnd.pins[0].id, 0);
+
                 let nIdx = 1;
                 nets.forEach((net, idx) => { if (idx === gndIdx) return; net.forEach(p => pinMap.set(p, nIdx)); nIdx++; });
+
                 editor.components.forEach(c => c.pins.forEach(p => { if (!pinMap.has(p.id)) pinMap.set(p.id, (c.type === 'gnd' ? 0 : nIdx++)); }));
+
                 const extra = [];
                 editor.components.forEach(c => {
                     if (['voltageSource', 'inductor', 'vcvs', 'ccvs', 'currentSense'].includes(c.type))
                         extra.push({ comp: c, type: 'std', index: (nIdx - 1) + extra.length });
                 });
-                const size = (nIdx - 1) + extra.length;
-                if (size <= 0) return;
-                const dcSol = this.solveDC(pinMap, extra);
-                editor.components.forEach(c => {
-                    let p1 = pinMap.get(c.pins[0]?.id), p2 = pinMap.get(c.pins[1]?.id);
-                    let v1 = (p1 || 0) > 0 ? dcSol[p1 - 1] : 0, v2 = (p2 || 0) > 0 ? dcSol[p2 - 1] : 0;
-                    if (c.type === 'capacitor') c.prevV = v1 - v2;
-                    if (c.type === 'inductor') { let e = extra.find(x => x.comp === c); if (e) c.prevI = dcSol[e.index]; }
-                });
-                const results = [];
-                for (let t = 0; t <= this.endTime; t += this.timeStep) {
+
+                return { pinMap, extra, size: (nIdx - 1) + extra.length, target };
+            }
+
+            solveStep(t, pinMap, extra, size) {
+                let iterations = 0;
+                let converged = false;
+                let sol = [];
+                let diodeChanged = false;
+
+                do {
+                    diodeChanged = false;
                     const G = Matrix.zeros(size, size), I = new Array(size).fill(0);
                     editor.components.forEach(c => {
                         let n1 = pinMap.get(c.pins[0]?.id) - 1, n2 = pinMap.get(c.pins[1]?.id) - 1;
                         let val = parseFloat(c.value) || 0;
                         if (c.type === 'resistor') {
                             let g = 1 / (val || 1e-9); if (n1 >= 0) G.add(n1, n1, g); if (n2 >= 0) G.add(n2, n2, g);
+                            if (n1 >= 0 && n2 >= 0) { G.add(n1, n2, -g); G.add(n2, n1, -g); }
+                        } else if (c.type === 'diode') {
+                            let g = (c.state === 'on') ? 1e8 : 1e-12;
+                            if (n1 >= 0) G.add(n1, n1, g); if (n2 >= 0) G.add(n2, n2, g);
                             if (n1 >= 0 && n2 >= 0) { G.add(n1, n2, -g); G.add(n2, n1, -g); }
                         } else if (c.type === 'capacitor') {
                             let geq = val / this.timeStep, ieq = geq * (c.prevV || 0);
@@ -1122,32 +1353,200 @@
                             if (n1 >= 0) G.add(n1, ev.index, 1); if (n2 >= 0) G.add(n2, ev.index, -1);
                             if (n1 >= 0) G.add(ev.index, n1, 1); if (n2 >= 0) G.add(ev.index, n2, -1);
                             if (c.type === 'vcvs') {
-                                let p1 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C+")), p2 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C-"));
+                                let p1 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C+"));
+                                let p2 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C-"));
                                 let cn1 = p1 ? pinMap.get(p1.pins[0].id) - 1 : -1, cn2 = p2 ? pinMap.get(p2.pins[0].id) - 1 : -1;
                                 if (cn1 >= 0) G.add(ev.index, cn1, val); if (cn2 >= 0) G.add(ev.index, cn2, -val);
                             } else {
-                                let sense = editor.components.find(x => x.controlOwner === c.id && x.type === 'currentSense'), sev = extra.find(x => x.comp === sense);
+                                let sense = editor.components.find(x => x.controlOwner === c.id && x.type === 'currentSense');
+                                let sev = extra.find(x => x.comp === sense);
                                 if (sev) G.add(ev.index, sev.index, val);
                             }
                         } else if (c.type === 'vccs') {
-                            let p1 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C+")), p2 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C-"));
+                            let p1 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C+"));
+                            let p2 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C-"));
                             let cn1 = p1 ? pinMap.get(p1.pins[0].id) - 1 : -1, cn2 = p2 ? pinMap.get(p2.pins[0].id) - 1 : -1;
                             if (n1 >= 0) { if (cn1 >= 0) G.add(n1, cn1, val); if (cn2 >= 0) G.add(n1, cn2, -val); }
                             if (n2 >= 0) { if (cn1 >= 0) G.add(n2, cn1, -val); if (cn2 >= 0) G.add(n2, cn2, val); }
                         } else if (c.type === 'cccs') {
-                            let sense = editor.components.find(x => x.controlOwner === c.id && x.type === 'currentSense'), sev = extra.find(x => x.comp === sense);
+                            let sense = editor.components.find(x => x.controlOwner === c.id && x.type === 'currentSense');
+                            let sev = extra.find(x => x.comp === sense);
                             if (sev) { if (n1 >= 0) G.add(n1, sev.index, val); if (n2 >= 0) G.add(n2, sev.index, -val); }
                         } else if (c.type === 'isource') { if (n1 >= 0) I[n1] -= val; if (n2 >= 0) I[n2] += val; }
                         else if (c.type === 'switch') {
-                            let closed = (t < parseFloat(c.switchTime) ? c.switchAction === 'open' : c.switchAction === 'close');
+                            let swT = parseFloat(c.switchTime) || 0;
+                            let closed;
+                            if (this.isInteractive) {
+                                // Interactive: Use c.state (if we had one) or default 'close' action state
+                                // Actually, Editor toggles c.switchAction string for now.
+                                // "open" means open switch. "close" means closed switch.
+                                closed = c.switchAction === 'close';
+                            } else {
+                                closed = (t < swT ? c.switchAction === 'open' : c.switchAction === 'close');
+                            }
                             let g = closed ? 1e7 : 1e-12;
                             if (n1 >= 0) G.add(n1, n1, g); if (n2 >= 0) G.add(n2, n2, g);
                             if (n1 >= 0 && n2 >= 0) { G.add(n1, n2, -g); G.add(n2, n1, -g); }
                         }
                     });
                     for (let i = 0; i < size; i++) G.add(i, i, 1e-20);
-                    const sol = G.solve(I);
+                    sol = G.solve(I);
+
+                    editor.components.forEach(c => {
+                        if (c.type === 'diode') {
+                            let n1 = pinMap.get(c.pins[0].id) - 1, n2 = pinMap.get(c.pins[1].id) - 1;
+                            let v1 = (n1 >= 0) ? sol[n1] : 0, v2 = (n2 >= 0) ? sol[n2] : 0;
+                            let vak = v1 - v2;
+                            if (c.state === 'on' && vak < 0) { c.state = 'off'; diodeChanged = true; }
+                            else if (c.state === 'off' && vak > 0) { c.state = 'on'; diodeChanged = true; }
+                        }
+                    });
+                    if (!diodeChanged) converged = true;
+                    iterations++;
+                } while (!converged && iterations < 20);
+                return sol;
+            }
+
+            solveDC(pinMap, extraVars) {
+                // Initial DC guess: assume Diodes OFF
+                // Start with iterative approach for DC as well
+                let iterations = 0;
+                let converged = false;
+                let finalSol = [];
+
+                do {
+                    const nodes = Array.from(pinMap.values()), nLimit = nodes.length > 0 ? Math.max(...nodes) + 1 : 1;
+                    const dim = nLimit - 1, size = dim + extraVars.length;
+                    if (size <= 0) return [];
+                    const G = Matrix.zeros(size, size), I = new Array(size).fill(0);
+
+                    editor.components.forEach(c => {
+                        let n1 = pinMap.get(c.pins[0]?.id) - 1, n2 = pinMap.get(c.pins[1]?.id) - 1;
+                        let val = parseFloat(c.value) || 0;
+                        if (c.type === 'resistor') {
+                            let g = 1 / (val || 1e-9);
+                            if (n1 >= 0) G.add(n1, n1, g); if (n2 >= 0) G.add(n2, n2, g);
+                            if (n1 >= 0 && n2 >= 0) { G.add(n1, n2, -g); G.add(n2, n1, -g); }
+                        } else if (c.type === 'diode') {
+                            // Diode Model: G large if ON, G small if OFF
+                            let g = (c.state === 'on') ? 1e8 : 1e-12;
+                            if (n1 >= 0) G.add(n1, n1, g); if (n2 >= 0) G.add(n2, n2, g);
+                            if (n1 >= 0 && n2 >= 0) { G.add(n1, n2, -g); G.add(n2, n1, -g); }
+                        } else if (c.type === 'voltageSource' || c.type === 'currentSense' || c.type === 'inductor') {
+                            let ev = extraVars.find(x => x.comp === c);
+                            if (ev) {
+                                if (n1 >= 0) G.add(n1, ev.index, 1); if (n2 >= 0) G.add(n2, ev.index, -1);
+                                if (n1 >= 0) G.add(ev.index, n1, 1); if (n2 >= 0) G.add(ev.index, n2, -1);
+                                if (c.type === 'voltageSource') I[ev.index] -= val;
+                            }
+                        } else if (c.type === 'vcvs' || c.type === 'ccvs') {
+                            let ev = extraVars.find(x => x.comp === c);
+                            if (ev) {
+                                if (n1 >= 0) G.add(n1, ev.index, 1); if (n2 >= 0) G.add(n2, ev.index, -1);
+                                if (n1 >= 0) G.add(ev.index, n1, 1); if (n2 >= 0) G.add(ev.index, n2, -1);
+                                if (c.type === 'vcvs') {
+                                    let p1 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C+"));
+                                    let p2 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C-"));
+                                    let cn1 = p1 ? pinMap.get(p1.pins[0].id) - 1 : -1, cn2 = p2 ? pinMap.get(p2.pins[0].id) - 1 : -1;
+                                    if (cn1 >= 0) G.add(ev.index, cn1, val); if (cn2 >= 0) G.add(ev.index, cn2, -val);
+                                } else {
+                                    let sense = editor.components.find(x => x.controlOwner === c.id && x.type === 'currentSense');
+                                    let sev = extraVars.find(x => x.comp === sense);
+                                    if (sev) G.add(ev.index, sev.index, val);
+                                }
+                            }
+                        } else if (c.type === 'vccs') {
+                            let p1 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C+"));
+                            let p2 = editor.components.find(x => x.controlOwner === c.id && x.label && x.label.startsWith("C-"));
+                            let cn1 = p1 ? pinMap.get(p1.pins[0].id) - 1 : -1, cn2 = p2 ? pinMap.get(p2.pins[0].id) - 1 : -1;
+                            if (n1 >= 0) { if (cn1 >= 0) G.add(n1, cn1, val); if (cn2 >= 0) G.add(n1, cn2, -val); }
+                            if (n2 >= 0) { if (cn1 >= 0) G.add(n2, cn1, -val); if (cn2 >= 0) G.add(n2, cn2, val); }
+                        } else if (c.type === 'cccs') {
+                            let sense = editor.components.find(x => x.controlOwner === c.id && x.type === 'currentSense');
+                            let sev = extraVars.find(x => x.comp === sense);
+                            if (sev) { if (n1 >= 0) G.add(n1, sev.index, val); if (n2 >= 0) G.add(n2, sev.index, -val); }
+                        } else if (c.type === 'isource') {
+                            if (n1 >= 0) I[n1] -= val; if (n2 >= 0) I[n2] += val;
+                        } else if (c.type === 'switch') {
+                            let closed = (c.switchAction === 'open');
+                            let g = closed ? 1e7 : 1e-12;
+                            if (n1 >= 0) G.add(n1, n1, g); if (n2 >= 0) G.add(n2, n2, g);
+                            if (n1 >= 0 && n2 >= 0) { G.add(n1, n2, -g); G.add(n2, n1, -g); }
+                        }
+                    });
+                    for (let i = 0; i < size; i++) G.add(i, i, 1e-20);
+                    finalSol = G.solve(I);
+
+                    // Check Diode States
+                    let changed = false;
+                    editor.components.forEach(c => {
+                        if (c.type === 'diode') {
+                            let n1 = pinMap.get(c.pins[0].id) - 1, n2 = pinMap.get(c.pins[1].id) - 1;
+                            let v1 = (n1 >= 0) ? finalSol[n1] : 0, v2 = (n2 >= 0) ? finalSol[n2] : 0;
+                            let vak = v1 - v2;
+
+                            if (c.state === 'on') {
+                                // If I < 0, turn OFF
+                                // I = (Vak) * G_on
+                                // Since G_on is huge, Vak will be tiny. We trust the sign of Vak essentially but it's really the sign of I.
+                                // If Vak < 0, current is flowing backwards.
+                                if (vak < 0) { c.state = 'off'; changed = true; }
+                            } else {
+                                // If Vak > 0, turn ON
+                                if (vak > 0) { c.state = 'on'; changed = true; }
+                            }
+                        }
+                    });
+
+                    if (!changed) converged = true;
+                    iterations++;
+                } while (!converged && iterations < 20);
+
+                return finalSol;
+            }
+
+            run(force = false) {
+                if (typeof editor === 'undefined' || !editor.initialized) return;
+                if (this.stopped && !force && !this.isInteractive) return;
+
+                if (this.mode === 'interactive') {
+                    if (!this.isInteractive) this.startInteractive();
+                    return;
+                }
+
+                // Transient Mode (Static)
+                this.stopped = false;
+                const status = document.getElementById('simStatus');
+
+                const topo = this.analyzeTopology();
+                if (topo.error) { if (status) status.textContent = topo.error; return; }
+                const { pinMap, extra, size, target } = topo;
+                if (!target) return;
+
+                // View Init
+                const durationEl = document.getElementById('simDuration');
+                this.endTime = durationEl ? parseFloat(durationEl.value) || 0.5 : 0.5;
+                if (Math.abs(this.viewXMax - this.viewXMin) < 1e-9 || this.viewXMax < this.viewXMin) {
+                    this.viewXMin = 0; this.viewXMax = this.endTime;
+                }
+
+                if (size <= 0) return;
+                const dcSol = this.solveDC(pinMap, extra);
+
+                // Initialize State
+                editor.components.forEach(c => {
+                    let p1 = pinMap.get(c.pins[0]?.id), p2 = pinMap.get(c.pins[1]?.id);
+                    let v1 = (p1 || 0) > 0 ? dcSol[p1 - 1] : 0, v2 = (p2 || 0) > 0 ? dcSol[p2 - 1] : 0;
+                    if (c.type === 'capacitor') c.prevV = v1 - v2;
+                    if (c.type === 'inductor') { let e = extra.find(x => x.comp === c); if (e) c.prevI = dcSol[e.index]; }
+                });
+
+                const results = [];
+                for (let t = 0; t <= this.endTime; t += this.timeStep) {
+                    const sol = this.solveStep(t, pinMap, extra, size);
                     results.push({ t, sol: [...sol] });
+
+                    // Update State for next step
                     editor.components.forEach(c => {
                         let p1 = pinMap.get(c.pins[0]?.id), p2 = pinMap.get(c.pins[1]?.id);
                         let v1 = (p1 || 0) > 0 ? sol[p1 - 1] : 0, v2 = (p2 || 0) > 0 ? sol[p2 - 1] : 0;
@@ -1159,115 +1558,266 @@
                 if (status) status.textContent = "Done";
             }
 
+            startInteractive() {
+                if (this.isInteractive && !this.stopped) return;
+                const topo = this.analyzeTopology();
+                if (topo.error) return;
+                this.topo = topo;
+
+                const { pinMap, extra, size } = topo;
+                const dcSol = this.solveDC(pinMap, extra);
+
+                // Init State
+                editor.components.forEach(c => {
+                    let p1 = pinMap.get(c.pins[0]?.id), p2 = pinMap.get(c.pins[1]?.id);
+                    let v1 = (p1 || 0) > 0 ? dcSol[p1 - 1] : 0, v2 = (p2 || 0) > 0 ? dcSol[p2 - 1] : 0;
+                    if (c.type === 'capacitor') c.prevV = v1 - v2;
+                    if (c.type === 'inductor') { let e = extra.find(x => x.comp === c); if (e) c.prevI = dcSol[e.index]; }
+                });
+
+                this.isInteractive = true;
+                this.stopped = false;
+                this.simTime = 0;
+                this.rollingData = [];
+                // Initialize rolling data with DC point
+                this.rollingData.push({ t: 0, sol: [...dcSol] });
+
+                const s = document.getElementById('simStatus');
+                if (s) s.textContent = 'Running (Live)';
+
+                this.loopInteractive();
+            }
+
+            loopInteractive() {
+                if (!this.isInteractive || this.stopped) return;
+
+                const maxStepsPerFrame = 50; // Tunable performance limit
+                let steps = 0;
+                const { pinMap, extra, size } = this.topo;
+
+                while (steps < maxStepsPerFrame) {
+                    this.simTime += this.timeStep;
+                    const sol = this.solveStep(this.simTime, pinMap, extra, size);
+
+                    // Buffer Logic
+                    this.rollingData.push({ t: this.simTime, sol: [...sol] });
+                    if (this.rollingData.length > this.maxPoints) this.rollingData.shift();
+
+                    // Update State
+                    editor.components.forEach(c => {
+                        let p1 = pinMap.get(c.pins[0]?.id), p2 = pinMap.get(c.pins[1]?.id);
+                        let v1 = (p1 || 0) > 0 ? sol[p1 - 1] : 0, v2 = (p2 || 0) > 0 ? sol[p2 - 1] : 0;
+                        if (c.type === 'capacitor') c.prevV = v1 - v2;
+                        if (c.type === 'inductor') { let e = extra.find(x => x.comp === c); if (e) c.prevI = sol[e.index]; }
+                    });
+                    steps++;
+                }
+
+                this.updateInteractiveView();
+                this.animationFrameId = requestAnimationFrame(() => this.loopInteractive());
+            }
+
+            updateInteractiveView() {
+                let target = editor.selection.size === 1 ? [...editor.selection][0] : editor.lastProbed;
+                if (!target) return;
+
+                const { pinMap, extra } = this.topo;
+
+                // Update View Window to scroll
+                const durationEl = document.getElementById('simDuration');
+                const span = durationEl ? parseFloat(durationEl.value) * parseFloat(document.getElementById('simDurationUnit').value) : 0.1;
+
+                this.viewXMax = this.simTime;
+                this.viewXMin = Math.max(0, this.simTime - span);
+
+                this.plot(this.rollingData, pinMap, extra, target);
+            }
+
             plot(data, map, extra, target) {
                 const canvas = document.getElementById('graphCanvas'), ctx = canvas.getContext('2d'); if (!canvas) return;
                 const w = canvas.width = canvas.parentElement.clientWidth, h = canvas.height = canvas.parentElement.clientHeight;
 
-                // 1. Data Extraction & Segmentation
-                let p1 = map.get(target.pins[0]?.id), p2 = map.get(target.pins[1]?.id);
-                let rawVals = [];
-                if (this.probeMode === 'voltage') {
-                    rawVals = data.map(d => ((p1 || 0) > 0 ? d.sol[p1 - 1] : 0) - ((p2 || 0) > 0 ? d.sol[p2 - 1] : 0));
-                } else {
-                    if (target.type === 'inductor' || target.type === 'voltageSource') { let ex = extra.find(x => x.comp === target); rawVals = ex ? data.map(d => d.sol[ex.index]) : data.map(() => 0); }
-                    else if (target.type === 'resistor') { let r = parseFloat(target.value) || 1; rawVals = data.map(d => (((p1 || 0) > 0 ? d.sol[p1 - 1] : 0) - ((p2 || 0) > 0 ? d.sol[p2 - 1] : 0)) / r); }
-                    else if (target.type === 'capacitor') {
-                        let c = parseFloat(target.value) || 1e-6; rawVals = [0];
-                        for (let i = 1; i < data.length; i++) {
-                            let dv = (((p1 || 0) > 0 ? data[i].sol[p1 - 1] : 0) - ((p2 || 0) > 0 ? data[i].sol[p2 - 1] : 0)) - (((p1 || 0) > 0 ? data[i - 1].sol[p1 - 1] : 0) - ((p2 || 0) > 0 ? data[i - 1].sol[p2 - 1] : 0));
-                            rawVals.push(c * dv / this.timeStep);
-                        }
-                    } else { rawVals = data.map(() => 0); }
-                }
+                // Helper to get V/I data
+                const getData = (mode) => {
+                    let p1 = map.get(target.pins[0]?.id), p2 = map.get(target.pins[1]?.id);
+                    if (mode === 'voltage') {
+                        return data.map(d => ((p1 || 0) > 0 ? d.sol[p1 - 1] : 0) - ((p2 || 0) > 0 ? d.sol[p2 - 1] : 0));
+                    } else {
+                        if (target.type === 'inductor' || target.type === 'voltageSource') { let ex = extra.find(x => x.comp === target); return ex ? data.map(d => d.sol[ex.index]) : data.map(() => 0); }
+                        else if (target.type === 'resistor') { let r = parseFloat(target.value) || 1; return data.map(d => (((p1 || 0) > 0 ? d.sol[p1 - 1] : 0) - ((p2 || 0) > 0 ? d.sol[p2 - 1] : 0)) / r); }
+                        else if (target.type === 'capacitor') {
+                            let c = parseFloat(target.value) || 1e-6; let vals = [0];
+                            for (let i = 1; i < data.length; i++) {
+                                let dv = (((p1 || 0) > 0 ? data[i].sol[p1 - 1] : 0) - ((p2 || 0) > 0 ? data[i].sol[p2 - 1] : 0)) - (((p1 || 0) > 0 ? data[i - 1].sol[p1 - 1] : 0) - ((p2 || 0) > 0 ? data[i - 1].sol[p2 - 1] : 0));
+                                vals.push(c * dv / this.timeStep);
+                            }
+                            return vals;
+                        } else { return data.map(() => 0); }
+                    }
+                };
+
+                let rawV = (this.probeMode === 'voltage' || this.probeMode === 'dual') ? getData('voltage') : null;
+                let rawI = (this.probeMode === 'current' || this.probeMode === 'dual') ? getData('current') : null;
+                let activeData = rawV || rawI;
 
                 // Identify Segments based on Switches
                 const switches = editor.components.filter(c => c.type === 'switch').map(s => parseFloat(s.switchTime) || 0).sort((a, b) => a - b);
                 const segments = [0, ...switches].filter(t => t < this.endTime);
 
-                // Find active segment (default to last significant one, or based on time cursor if we had one)
-                // For now, solve for the *last* segment that has enough data
-                let activeStart = segments[segments.length - 1];
-                let idxStart = Math.floor(activeStart / this.timeStep);
-                // buffer start to avoid transient spikes right at switch
-                idxStart += 2;
-
-                if (idxStart >= rawVals.length - 5) idxStart = 0; // Fallback
-
-                const segmentT = [], segmentV = [];
-                for (let i = idxStart; i < rawVals.length; i++) {
-                    segmentT.push(data[i].t - data[idxStart].t); // Rel shift
-                    segmentV.push(rawVals[i]);
+                // Use View Window for plotting
+                if (Math.abs(this.viewXMax - this.viewXMin) < 1e-9 || this.viewXMax < this.viewXMin) {
+                    this.viewXMin = 0; this.viewXMax = this.endTime;
                 }
 
-                // 2. Equation Fitting
+                let plotStartT = this.viewXMin;
+                let plotEndT = this.viewXMax;
+
                 const eqDiv = document.getElementById('equationDisplay');
-                if (eqDiv && segmentV.length > 10) {
-                    const fitter = new EquationFitter(this.timeStep);
-                    const eq = fitter.fit(segmentT, segmentV, this.probeMode === 'voltage' ? 'V' : 'A', this.probeMode === 'voltage' ? 'v' : 'i');
-                    eqDiv.innerHTML = eq;
-                } else if (eqDiv) {
-                    eqDiv.innerHTML = "Gathering data...";
+                if (eqDiv) {
+                    if (this.probeMode !== 'dual' && activeData && activeData.length > 10) {
+                        let idxStart = Math.max(0, Math.floor(plotStartT / this.timeStep));
+                        let idxEnd = Math.min(data.length, Math.floor(plotEndT / this.timeStep));
+                        if (idxEnd > idxStart + 10) {
+                            const segmentT = [], segmentV = [];
+                            for (let i = idxStart; i < idxEnd; i++) { segmentT.push(data[i].t - data[idxStart].t); segmentV.push(activeData[i]); }
+                            const fitter = new EquationFitter(this.timeStep);
+                            const eq = fitter.fit(segmentT, segmentV, this.probeMode === 'voltage' ? 'V' : 'A', this.probeMode === 'voltage' ? 'v' : 'i');
+                            eqDiv.innerHTML = eq;
+                        } else eqDiv.innerHTML = "Insufficient data in view";
+                    } else {
+                        eqDiv.innerHTML = this.probeMode === 'dual' ? "Dual Mode: Fitting disabled" : "Gathering data...";
+                    }
                 }
 
-                // 3. Visualization
-                if (this.autoY && rawVals.length > 0) {
-                    let vMin = Math.min(...rawVals), vMax = Math.max(...rawVals);
-                    const k = 0.6;
-                    let R = Math.max(vMax / k, vMin / (k - 1), 0.1) * 1.25;
-                    this.yMax = k * R; this.yMin = (k - 1) * R;
-                    const yMinEl = document.getElementById('yAxisMin'), yMaxEl = document.getElementById('yAxisMax');
-                    if (yMinEl) yMinEl.value = this.yMin.toFixed(2); if (yMaxEl) yMaxEl.value = this.yMax.toFixed(2);
-                }
-
-                ctx.clearRect(0, 0, w, h);
-                const pL = 50, pR = 20, pT = 20, pB = 30;
+                // Visualization Setup
+                const pL = 50, pR = 50, pT = 30, pB = 30;
                 const gw = w - pL - pR, gh = h - pT - pB;
-                const range = this.yMax - this.yMin;
+                ctx.clearRect(0, 0, w, h);
 
+                // Helper: Map Time to X
+                const getX = t => pL + ((t - this.viewXMin) / (this.viewXMax - this.viewXMin)) * gw;
+
+                // Grid & Axes
                 if (this.showGrid) {
-                    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+                    ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1;
+                    // Vertical Lines (Time)
                     for (let i = 0; i <= 5; i++) {
-                        let x = pL + (i / 5) * gw, y = pT + (i / 5) * gh;
-                        ctx.beginPath(); ctx.moveTo(x, pT); ctx.lineTo(x, h - pB); ctx.stroke();
+                        let t = this.viewXMin + (i / 5) * (this.viewXMax - this.viewXMin);
+                        let x = getX(t);
+                        if (x >= pL && x <= w - pR) {
+                            ctx.beginPath(); ctx.moveTo(x, pT); ctx.lineTo(x, h - pB); ctx.stroke();
+                        }
+                    }
+                    // Horizontal Lines
+                    for (let i = 0; i <= 5; i++) {
+                        let y = pT + (i / 5) * gh;
                         ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(w - pR, y); ctx.stroke();
                     }
-                    ctx.setLineDash([]);
                 }
 
-                // Axes
-                ctx.strokeStyle = '#64748b'; ctx.lineWidth = 1.5;
-                ctx.beginPath(); ctx.moveTo(pL, pT); ctx.lineTo(pL, h - pB); ctx.lineTo(w - pR, h - pB); ctx.stroke();
-
-                // Segments markers
-                ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.setLineDash([2, 2]);
-                switches.forEach(st => {
-                    let x = pL + (st / this.endTime) * gw;
-                    if (x >= pL && x <= w - pR) { ctx.beginPath(); ctx.moveTo(x, pT); ctx.lineTo(x, h - pB); ctx.stroke(); }
-                });
-                ctx.setLineDash([]);
-
-                // Labels
-                ctx.fillStyle = '#64748b'; ctx.font = '10px Inter'; ctx.textAlign = 'right';
-                for (let i = 0; i <= 4; i++) {
-                    let v = this.yMax - (i / 4) * range;
-                    ctx.fillText(v.toFixed(1), pL - 10, pT + (i / 4) * gh + 4);
+                // Draw X-Axis at Y=0 (Cartesian Style)
+                let currentYMin = this.yMin, currentYMax = this.yMax;
+                if (this.probeMode !== 'dual') {
+                    const range = currentYMax - currentYMin;
+                    const y0 = h - pB - ((0 - currentYMin) / range) * gh;
+                    if (y0 >= pT && y0 <= h - pB) {
+                        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.moveTo(pL, y0); ctx.lineTo(w - pR, y0); ctx.stroke();
+                    }
                 }
-                ctx.textAlign = 'center';
+
+                // Draw Y-Axis at X=0 (Cartesian Style)
+                if (this.viewXMin <= 0 && this.viewXMax >= 0) {
+                    const x0 = getX(0);
+                    if (x0 >= pL && x0 <= w - pR) {
+                        ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+                        ctx.beginPath(); ctx.moveTo(x0, pT); ctx.lineTo(x0, h - pB); ctx.stroke();
+                    }
+                }
+
+                // Draw Plot Helper
+                const drawCurve = (vals, color, yMin, yMax, axisX) => {
+                    if (!vals || vals.length === 0) return;
+                    const range = yMax - yMin || 1;
+                    const getY = v => h - pB - ((v - yMin) / range) * gh;
+
+                    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+
+                    let started = false;
+                    let step = Math.max(1, Math.floor(vals.length / (gw * 2)));
+
+                    for (let i = 0; i < vals.length; i += step) {
+                        let t = data[i].t;
+                        // Draw if visible or connecting
+                        if (t < this.viewXMin) {
+                            if (i + step < vals.length && data[i + step].t >= this.viewXMin) { /* glue */ }
+                            else continue;
+                        }
+                        if (t > this.viewXMax) {
+                            if (started) { ctx.lineTo(getX(t), getY(vals[i])); }
+                            break;
+                        }
+
+                        let x = getX(t);
+                        let y = getY(vals[i]);
+                        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+
+                    // Axis Labels
+                    ctx.fillStyle = color; ctx.font = '11px Inter'; ctx.textAlign = axisX === pL ? 'right' : 'left';
+                    ctx.textBaseline = 'middle';
+                    for (let i = 0; i <= 4; i++) {
+                        let v = yMax - (i / 4) * range;
+                        let y = pT + (i / 4) * gh;
+                        ctx.fillText(v.toFixed(2), axisX === pL ? axisX - 8 : axisX + 8, y);
+                    }
+                };
+
+                // Time Axis Labels
+                ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
                 for (let i = 0; i <= 5; i++) {
-                    let t = (i / 5) * this.endTime;
-                    ctx.fillText(t.toFixed(2), pL + (i / 5) * gw, h - pB + 15);
+                    let t = this.viewXMin + (i / 5) * (this.viewXMax - this.viewXMin);
+                    ctx.fillText(t.toFixed(2) + 's', getX(t), h - pB + 6);
                 }
-                ctx.fillText('Time (s)', pL + gw / 2, h - 5);
 
-                const getY = v => h - pB - ((v - this.yMin) / range) * gh;
-                ctx.strokeStyle = 'var(--accent-color)'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
-                ctx.beginPath();
-                rawVals.forEach((v, i) => {
-                    let x = pL + (i / (rawVals.length - 1)) * gw, y = getY(v);
-                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                });
-                ctx.stroke();
+                // PLOT
+                if (this.probeMode === 'dual') {
+                    // Auto-scale both local vars
+                    let vMin = Math.min(...rawV), vMax = Math.max(...rawV);
+                    let iMin = Math.min(...rawI), iMax = Math.max(...rawI);
+                    let vR = Math.max(vMax - vMin, 0.1) * 1.2; vMin -= vR * 0.1; vMax += vR * 0.1;
+                    let iR = Math.max(iMax - iMin, 0.1) * 1.2; iMin -= iR * 0.1; iMax += iR * 0.1;
+
+                    drawCurve(rawV, '#2563eb', vMin, vMax, pL);
+                    drawCurve(rawI, '#f59e0b', iMin, iMax, w - pR);
+
+                    // Legend
+                    ctx.font = '12px Inter'; ctx.textAlign = 'right';
+                    ctx.fillStyle = '#2563eb'; ctx.fillText("Voltage (V)", w - 10, 15);
+                    ctx.fillStyle = '#f59e0b'; ctx.fillText("Current (A)", w - 90, 15);
+
+                } else {
+                    let vals = rawV || rawI;
+                    let min, max;
+                    if (this.autoY && vals.length > 0) {
+                        min = Math.min(...vals); max = Math.max(...vals);
+                        let range = Math.max(max - min, 0.1) * 1.2;
+                        this.yMax = max + range * 0.1; this.yMin = min - range * 0.1;
+                        const yMinEl = document.getElementById('yAxisMin'), yMaxEl = document.getElementById('yAxisMax');
+                        if (yMinEl) yMinEl.value = this.yMin.toFixed(2); if (yMaxEl) yMaxEl.value = this.yMax.toFixed(2);
+                    } else { min = this.yMin; max = this.yMax; }
+
+                    let col = this.probeMode === 'voltage' ? '#2563eb' : '#f59e0b';
+                    drawCurve(vals, col, this.yMin, this.yMax, pL);
+
+                    // Legend
+                    ctx.textAlign = 'right'; ctx.fillStyle = col;
+                    ctx.fillText(this.probeMode === 'voltage' ? "Voltage (V)" : "Current (A)", w - 10, 15);
+                }
             }
+
+
         }
 
         class EquationFitter {
@@ -1429,6 +1979,7 @@
                 this.value = (['voltageSource', 'vcvs', 'vccs', 'ccvs', 'cccs'].includes(type) ? 12 : 100);
                 this.unit = this.getUnit(type);
                 if (type === 'switch') { this.switchTime = 0; this.switchAction = 'close'; }
+                if (type === 'diode') { this.state = 'off'; }
                 if (['vcvs', 'vccs', 'ccvs', 'cccs', 'voltageProbe', 'currentSense'].includes(type)) { this.linked = []; }
                 this.pins = (type === 'gnd' ? [{ id: this.id + '_1', x: 0, y: -15 }] :
                     type === 'voltageProbe' ? [{ id: this.id + '_1', x: 0, y: 10 }] :
@@ -1453,7 +2004,23 @@
                     else if (this.type === 'capacitor') { ctx.moveTo(-30, 0); ctx.lineTo(-5, 0); ctx.moveTo(-5, -15); ctx.lineTo(-5, 15); ctx.moveTo(5, -15); ctx.lineTo(5, 15); ctx.moveTo(5, 0); ctx.lineTo(30, 0); }
                     else if (this.type === 'inductor') { ctx.moveTo(-30, 0); ctx.lineTo(-20, 0); for (let i = 0; i < 3; i++) ctx.arc(-15 + i * 10, 0, 5, Math.PI, 0); ctx.lineTo(30, 0); }
                     else if (this.type === 'gnd') { ctx.moveTo(0, -15); ctx.lineTo(0, 0); ctx.moveTo(-10, 0); ctx.lineTo(10, 0); ctx.moveTo(-6, 5); ctx.lineTo(6, 5); }
-                    else if (this.type === 'switch') { ctx.moveTo(-30, 0); ctx.lineTo(-15, 0); ctx.moveTo(15, 0); ctx.lineTo(30, 0); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-15, 0); if (this.switchAction === 'close') ctx.lineTo(15, -10); else ctx.lineTo(15, 0); }
+                    else if (this.type === 'switch') {
+                        ctx.moveTo(-30, 0); ctx.lineTo(-15, 0); ctx.moveTo(15, 0); ctx.lineTo(30, 0); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-15, 0);
+                        let closed = (this.switchAction === 'open'); // Default for transient (starts closed if action is open later)
+                        if (typeof sim !== 'undefined' && sim.isInteractive) closed = (this.switchAction === 'close');
+                        if (closed) ctx.lineTo(15, 0); else ctx.lineTo(15, -10);
+                    }
+                    else if (this.type === 'diode') {
+                        // Anode (-30 to 0), Cathode (0 to 30)
+                        ctx.moveTo(-30, 0); ctx.lineTo(-10, 0); // Left wire
+                        // Triangle
+                        ctx.moveTo(-10, -10); ctx.lineTo(-10, 10); ctx.lineTo(10, 0); ctx.closePath();
+                        // Bar
+                        ctx.moveTo(10, -10); ctx.lineTo(10, 10);
+                        ctx.moveTo(10, 0); ctx.lineTo(30, 0); // Right wire
+                        // Debug state visual
+                        if (this.state === 'on') { ctx.fillStyle = 'rgba(0, 255, 0, 0.2)'; ctx.fill(); }
+                    }
                     else if (this.type === 'voltageSource' || this.type === 'isource') {
                         ctx.arc(0, 0, 15, 0, Math.PI * 2); ctx.moveTo(-30, 0); ctx.lineTo(-15, 0); ctx.moveTo(15, 0); ctx.lineTo(30, 0);
                         if (this.type === 'voltageSource') { ctx.fillText("+", 5, 4); ctx.fillText("-", -5, 4); }
@@ -1620,6 +2187,10 @@
                 }
                 let hit = this.components.find(c => c.hitTest(w.x, w.y));
                 if (hit) {
+                    if (typeof sim !== 'undefined' && sim.isInteractive && hit.type === 'switch') {
+                        hit.switchAction = (hit.switchAction === 'close' ? 'open' : 'close');
+                        return;
+                    }
                     if (!e.ctrlKey && !this.selection.has(hit)) this.selection.clear();
                     this.selection.add(hit); this.lastProbed = hit;
                     this.dragging = { ox: w.x, oy: w.y, start: Array.from(this.selection).filter(s => s.pins).map(c => ({ c, x: c.x, y: c.y })) };
@@ -1958,6 +2529,28 @@
                 setInterval(() => this.autoSave(), 30000);
             }
 
+            updateHeader() {
+                const titleMap = {
+                    'my': 'Dashboard',
+                    'pub': 'Dashboard',
+                    'grp': 'Dashboard',
+                    'profile': 'Profile',
+                    'admin': 'Admin Panel'
+                };
+                const h3 = this.modal.querySelector('h3 span');
+                if (h3) h3.textContent = titleMap[this.currentTab] || 'Dashboard';
+
+                // Hide tabs for specific views
+                const tabContainer = document.querySelector('#dashboardModal > div[style*="border-bottom"]');
+                if (tabContainer) {
+                    if (['profile', 'admin'].includes(this.currentTab)) {
+                        tabContainer.style.display = 'none';
+                    } else {
+                        tabContainer.style.display = 'flex';
+                    }
+                }
+            }
+
             async autoSave() {
                 if (!this.loadedCircuitId || !currentUser()) return;
                 console.log("Auto-saving...");
@@ -1973,6 +2566,7 @@
 
             async switchTab(tab) {
                 this.currentTab = tab;
+                this.updateHeader();
                 document.querySelectorAll('#dashboardModal .btn').forEach(b => b.style.background = '');
                 const btn = document.getElementById(tab === 'my' ? 'tabMy' : tab === 'pub' ? 'tabPub' : 'tabGrp');
                 if (btn) btn.style.background = '#e2e8f0';
@@ -2213,7 +2807,10 @@
 
                 this.content.innerHTML = `
                     <div style="padding:10px; background:#fff; border-bottom:1px solid #eee;">
-                        <h2>${group.name} ${group.isPrivate ? '🔒' : '🌏'}</h2>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <h2>${group.name} ${group.isPrivate ? '🔒' : '🌏'}</h2>
+                            <button class="btn btn-primary" onclick="chat.setGroup('${group._id}'); chat.toggle()">💬 Group Chat</button>
+                        </div>
                         <p style="color:#666; font-size:0.9rem;">
                             Owner: ${group.ownerName}<br>
                             Members: ${[group.ownerName, ...(group.members || [])].join(', ')}
@@ -2330,9 +2927,18 @@
                 }
             }
 
-            show() {
+            show(tab = 'my') {
                 this.modal.style.display = 'flex';
-                this.switchTab('my');
+                // Only switch tab if it's a standard list tab, otherwise just update state
+                // 'profile' and 'admin' are handled by their specific load methods
+                if (['my', 'pub', 'grp'].includes(tab)) {
+                    this.switchTab(tab);
+                } else {
+                    this.currentTab = tab;
+                    this.updateHeader();
+                    // Clear active state of main tabs
+                    document.querySelectorAll('#dashboardModal .btn').forEach(b => b.style.background = '');
+                }
             }
         }
 
@@ -2341,7 +2947,11 @@
                 this.sidebar = document.getElementById('chatSidebar');
                 this.messagesDiv = document.getElementById('chatMessages');
                 this.input = document.getElementById('chatInput');
+                this.previewDiv = document.getElementById('chatReplyPreview');
+                this.previewText = document.getElementById('replyPreviewText');
                 this.circuitId = null;
+                this.groupId = null;
+                this.replyTo = null;
                 this.pollingInterval = null;
             }
             toggle() { this.sidebar.classList.toggle('open'); if (this.sidebar.classList.contains('open')) this.load(); }
@@ -2349,6 +2959,19 @@
             setCircuit(id) {
                 if (this.circuitId === id) return;
                 this.circuitId = id;
+                this.groupId = null;
+                this.reset();
+                document.getElementById('chatToggleBtn').style.display = 'flex';
+            }
+            setGroup(id) {
+                if (this.groupId === id) return;
+                this.groupId = id;
+                this.circuitId = null;
+                this.reset();
+                document.getElementById('chatToggleBtn').style.display = 'flex';
+            }
+            reset() {
+                this.clearReply();
                 this.stop();
                 this.start();
             }
@@ -2358,16 +2981,33 @@
             }
             stop() { if (this.pollingInterval) clearInterval(this.pollingInterval); this.messagesDiv.innerHTML = '<p>No messages yet.</p>'; }
             async load() {
-                if (!this.circuitId) return;
-                const msgs = await dash.api(`messages?circuitId=${this.circuitId}`);
+                const q = this.circuitId ? `circuitId=${this.circuitId}` : `groupId=${this.groupId}`;
+                if (!this.circuitId && !this.groupId) return;
+                const msgs = await dash.api(`messages?${q}`);
                 if (msgs) this.render(msgs);
             }
             async send() {
                 const text = this.input.value.trim();
-                if (!text || !this.circuitId) return;
+                const q = this.circuitId ? `circuitId=${this.circuitId}` : `groupId=${this.groupId}`;
+                if (!text || (!this.circuitId && !this.groupId)) return;
+
+                const body = { text };
+                if (this.replyTo) body.replyTo = this.replyTo;
+
                 this.input.value = '';
-                await dash.api(`messages?circuitId=${this.circuitId}`, 'POST', { text });
+                this.clearReply();
+                await dash.api(`messages?${q}`, 'POST', body);
                 this.load();
+            }
+            setReply(id, sender, text) {
+                this.replyTo = id;
+                this.previewDiv.style.display = 'flex';
+                this.previewText.textContent = `Replying to ${sender}: "${text}"`;
+                this.input.focus();
+            }
+            clearReply() {
+                this.replyTo = null;
+                this.previewDiv.style.display = 'none';
             }
             render(list) {
                 if (list.length === 0) {
@@ -2375,13 +3015,61 @@
                     return;
                 }
                 const myId = currentUser()?.sub;
-                this.messagesDiv.innerHTML = list.map(m => `
-                    <div class="message ${m.senderId === myId ? 'mine' : ''}">
-                        <div class="message-info">${m.senderName} • ${new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                        <div>${m.text}</div>
-                    </div>
-                `).join('');
+                const emojis = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
+
+                this.messagesDiv.innerHTML = list.map(m => {
+                    const replyCtx = m.replyTo ? list.find(x => x._id === m.replyTo) : null;
+                    const replyHtml = replyCtx ? `<div class="reply-context" onclick="chat.scrollToMessage('${m.replyTo}')">Replying to ${replyCtx.senderName}: "${replyCtx.text}"</div>` : '';
+
+                    // Reactions HTML
+                    let reactionsHtml = '';
+                    if (m.reactions && Object.keys(m.reactions).length > 0) {
+                        reactionsHtml = `<div class="reactions-container">` +
+                            Object.entries(m.reactions).map(([emoji, users]) => {
+                                if (!users || users.length === 0) return '';
+                                const active = users.includes(myId);
+                                return `<div class="reaction-chip ${active ? 'active' : ''}" onclick="chat.toggleReaction('${m._id}', '${emoji}', ${active})">${emoji} ${users.length}</div>`;
+                            }).join('') + `</div>`;
+                    }
+
+                    const deleteHtml = m.senderId === myId ? `<button class="action-btn delete-btn" onclick="chat.deleteMessage('${m._id}')">Delete</button>` : '';
+
+                    return `
+                        <div class="message ${m.senderId === myId ? 'mine' : ''}" id="msg_${m._id}">
+                            <div class="message-info">
+                                <span>${m.senderName} • ${new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                <div class="message-actions">
+                                    <button class="action-btn" onclick="chat.setReply('${m._id}', '${m.senderName}', '${m.text.replace(/'/g, "\\'")}')">Reply</button>
+                                    <div style="position:relative; display:inline-block;">
+                                        <button class="action-btn reaction-picker-trigger">React</button>
+                                        <div class="reaction-picker">
+                                            ${emojis.map(e => `<span class="picker-emoji" onclick="chat.toggleReaction('${m._id}', '${e}', false)">${e}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                    ${deleteHtml}
+                                </div>
+                            </div>
+                            ${replyHtml}
+                            <div>${m.text}</div>
+                            ${reactionsHtml}
+                        </div>
+                    `;
+                }).join('');
                 this.messagesDiv.scrollTop = this.messagesDiv.scrollHeight;
+            }
+            async toggleReaction(id, emoji, isActive) {
+                const q = this.circuitId ? `circuitId=${this.circuitId}` : `groupId=${this.groupId}`;
+                await dash.api(`messages?${q}`, 'PATCH', { id, emoji, action: isActive ? 'unreact' : 'react' });
+                this.load();
+            }
+            async deleteMessage(id) {
+                if (!confirm("Delete this message?")) return;
+                await dash.api(`messages?id=${id}`, 'DELETE');
+                this.load();
+            }
+            scrollToMessage(id) {
+                const el = document.getElementById('msg_' + id);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
 
@@ -2532,16 +3220,26 @@
                 } else {
                     btn.style.display = 'block';
                 }
+
+                // Show Admin-only Footer Buttons
+                const btnTest = document.getElementById('btnTestConn');
+                if (btnTest) btnTest.style.display = 'inline-block';
+                const btnLogs = document.getElementById('btnSysLogs');
+                if (btnLogs) btnLogs.style.display = 'inline-block';
+
             } else {
                 console.log("Not an admin. Expected:", ADMIN_EMAIL);
+                // Ensure hidden if not admin (e.g. re-login)
+                const btnTest = document.getElementById('btnTestConn');
+                if (btnTest) btnTest.style.display = 'none';
+                const btnLogs = document.getElementById('btnSysLogs');
+                if (btnLogs) btnLogs.style.display = 'none';
             }
         }
 
         // Add to Dashboard Class
         Dashboard.prototype.loadAdmin = async function () {
-            this.show();
-            this.currentTab = 'admin';
-            this.updateHeader();
+            this.show('admin');
             this.content.innerHTML = `
                 <div style="display:flex; gap:10px; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px; overflow-x:auto;">
                     <button class="btn" onclick="dash.loadAdminStats()">📊 Global Stats</button>
@@ -2712,9 +3410,7 @@
         };
 
         Dashboard.prototype.loadProfile = async function () {
-            this.show();
-            this.currentTab = 'profile';
-            this.updateHeader();
+            this.show('profile');
             const user = netlifyIdentity.currentUser();
 
             this.content.innerHTML = `
@@ -2737,22 +3433,25 @@
                     </div>
 
                     <div class="card" style="background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                        <h3 style="margin-top: 0; font-size: 1.1rem; margin-bottom:15px; border-bottom:1px solid #f1f5f9; padding-bottom:10px;">Security Settings</h3>
-                        <div class="form-group" style="margin-bottom: 20px;">
-                            <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #475569; font-weight:500;">Change Password</label>
-                            <div style="display:flex; gap:10px;">
-                                <input type="password" id="newPassword" placeholder="Enter new password" style="flex:1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size:0.95rem;">
-                                <button class="btn btn-primary" onclick="dash.updatePassword()" style="background: #2563eb; color: white; border: none; padding:0 20px;">Update</button>
+                        <details>
+                            <summary style="font-size: 1.1rem; font-weight: bold; cursor: pointer; padding-bottom: 5px; color:#475569;">Security Settings</summary>
+                            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label style="display: block; font-size: 0.85rem; margin-bottom: 8px; color: #475569; font-weight:500;">Change Password</label>
+                                    <div style="display:flex; gap:10px;">
+                                        <input type="password" id="newPassword" placeholder="Enter new password" style="flex:1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size:0.95rem;">
+                                        <button class="btn btn-primary" onclick="dash.updatePassword()" style="background: #2563eb; color: white; border: none; padding:0 20px;">Update</button>
+                                    </div>
+                                    <p style="font-size:0.75rem; color:#94a3b8; margin-top:5px;">Make sure your new password is secure.</p>
+                                </div>
+                                
+                                <div style="border-top:1px solid #f1f5f9; padding-top:20px; margin-top:20px;">
+                                     <button class="btn" style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca; width:100%; text-align:left;" onclick="alert('To delete your account, please contact support or use the contact form.')">
+                                        🗑️ Delete Account
+                                     </button>
+                                </div>
                             </div>
-                            <p style="font-size:0.75rem; color:#94a3b8; margin-top:5px;">Make sure your new password is secure.</p>
-                        </div>
-                        
-                        <div style="border-top:1px solid #f1f5f9; padding-top:20px; margin-top:20px;">
-                             <h3 style="font-size: 1.1rem; margin-top:0; color:#dc2626;">Danger Zone</h3>
-                             <button class="btn" style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca; width:100%; text-align:left;" onclick="alert('To delete your account, please contact support or use the contact form.')">
-                                🗑️ Delete Account
-                             </button>
-                        </div>
+                        </details>
                     </div>
                 </div>
             `;
